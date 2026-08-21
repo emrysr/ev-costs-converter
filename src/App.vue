@@ -5,6 +5,9 @@ const DEFAULT_EV_RATE = 24
 const DEFAULT_EV_EFFICIENCY = 3.5
 const DEFAULT_PETROL_MPG = 40
 const DEFAULT_SHAKE_THRESHOLD = 2500
+const DEFAULT_BATTERY_CAPACITY = 60
+const DEFAULT_CURRENT_SOC = 20
+const DEFAULT_TARGET_SOC = 80
 
 const evRate = ref<number>(DEFAULT_EV_RATE)
 const evEfficiency = ref<number>(DEFAULT_EV_EFFICIENCY)
@@ -12,8 +15,13 @@ const petrolMpg = ref<number>(DEFAULT_PETROL_MPG)
 const shakeThreshold = ref<number>(DEFAULT_SHAKE_THRESHOLD)
 const shakeEnabled = ref<boolean>(true)
 
+const batteryCapacity = ref<number>(DEFAULT_BATTERY_CAPACITY)
+const currentSoc = ref<number>(DEFAULT_CURRENT_SOC)
+const targetSoc = ref<number>(DEFAULT_TARGET_SOC)
+
 const settingsDialog = ref<HTMLDialogElement | null>(null)
 const shakePermissionGranted = ref<boolean>(false)
+const copyFeedback = ref<boolean>(false)
 
 let lastX = 0, lastY = 0, lastZ = 0
 let lastTime = 0
@@ -25,6 +33,23 @@ const YEARLY_PETROL_PRICES: Record<number, number> = {
   2004: 77.9, 2006: 88.9, 2008: 103.9, 2010: 111.9, 2012: 134.1,
   2014: 130.9, 2016: 103.9, 2018: 115.9, 2020: 119.9, 2022: 159.9,
   2023: 138.9, 2024: 145.9
+}
+
+const PRESET_RATES = [
+  { label: 'Home (7p)', value: 7 },
+  { label: 'Public (45p)', value: 45 },
+  { label: 'Rapid (79p)', value: 79 }
+]
+
+function handleChargerInput(event: Event) {
+  const val = parseFloat((event.target as HTMLInputElement).value)
+  for (const preset of PRESET_RATES) {
+    if (Math.abs(val - preset.value) <= 2) {
+      evRate.value = preset.value
+      return
+    }
+  }
+  evRate.value = val
 }
 
 function handleMotion(event: DeviceMotionEvent) {
@@ -94,7 +119,23 @@ function resetToDefaults() {
   petrolMpg.value = DEFAULT_PETROL_MPG
   shakeThreshold.value = DEFAULT_SHAKE_THRESHOLD
   shakeEnabled.value = true
+  batteryCapacity.value = DEFAULT_BATTERY_CAPACITY
+  currentSoc.value = DEFAULT_CURRENT_SOC
+  targetSoc.value = DEFAULT_TARGET_SOC
   localStorage.clear()
+}
+
+async function copyResultsSummary() {
+  const text = `EV Cost Converter: ${costPerMile.value}p/mile (Equiv. ${pencePerLitre.value}p/Litre, Year ${equivalentYearResult.value.year})`
+  try {
+    await navigator.clipboard.writeText(text)
+    copyFeedback.value = true
+    setTimeout(() => {
+      copyFeedback.value = false
+    }, 2000)
+  } catch (e) {
+    console.error(e)
+  }
 }
 
 onMounted(() => {
@@ -103,12 +144,18 @@ onMounted(() => {
   const savedPetrolMpg = localStorage.getItem('petrol_mpg')
   const savedShakeThreshold = localStorage.getItem('shake_threshold')
   const savedShakeEnabled = localStorage.getItem('shake_enabled')
+  const savedBatteryCapacity = localStorage.getItem('battery_capacity')
+  const savedCurrentSoc = localStorage.getItem('current_soc')
+  const savedTargetSoc = localStorage.getItem('target_soc')
 
   if (savedEvRate !== null) evRate.value = parseFloat(savedEvRate)
   if (savedEvEfficiency !== null) evEfficiency.value = parseFloat(savedEvEfficiency)
   if (savedPetrolMpg !== null) petrolMpg.value = parseFloat(savedPetrolMpg)
   if (savedShakeThreshold !== null) shakeThreshold.value = parseInt(savedShakeThreshold, 10)
   if (savedShakeEnabled !== null) shakeEnabled.value = savedShakeEnabled === 'true'
+  if (savedBatteryCapacity !== null) batteryCapacity.value = parseFloat(savedBatteryCapacity)
+  if (savedCurrentSoc !== null) currentSoc.value = parseFloat(savedCurrentSoc)
+  if (savedTargetSoc !== null) targetSoc.value = parseFloat(savedTargetSoc)
 
   if ('DeviceMotionEvent' in window && typeof (DeviceMotionEvent as any).requestPermission !== 'function') {
     window.addEventListener('devicemotion', handleMotion)
@@ -121,13 +168,16 @@ onUnmounted(() => {
 })
 
 watch(
-  [evRate, evEfficiency, petrolMpg, shakeThreshold, shakeEnabled],
-  ([newRate, newEfficiency, newMpg, newThreshold, newShakeEnabled]) => {
+  [evRate, evEfficiency, petrolMpg, shakeThreshold, shakeEnabled, batteryCapacity, currentSoc, targetSoc],
+  ([newRate, newEfficiency, newMpg, newThreshold, newShakeEnabled, newCap, newCurr, newTarget]) => {
     localStorage.setItem('ev_rate', newRate.toString())
     localStorage.setItem('ev_efficiency', newEfficiency.toString())
     localStorage.setItem('petrol_mpg', newMpg.toString())
     localStorage.setItem('shake_threshold', newThreshold.toString())
     localStorage.setItem('shake_enabled', newShakeEnabled.toString())
+    localStorage.setItem('battery_capacity', newCap.toString())
+    localStorage.setItem('current_soc', newCurr.toString())
+    localStorage.setItem('target_soc', newTarget.toString())
   }
 )
 
@@ -167,6 +217,15 @@ const equivalentYearResult = computed<{ year: number; isOutBounds: boolean }>(()
   }, years[0])
 
   return { year: closestYear, isOutBounds: false }
+})
+
+const chargeDetails = computed(() => {
+  const percentageToAdd = Math.max(0, targetSoc.value - currentSoc.value)
+  const kWhNeeded = (batteryCapacity.value * percentageToAdd) / 100
+  const totalCostPence = kWhNeeded * evRate.value
+  const totalCostPounds = (totalCostPence / 100).toFixed(2)
+  const rangeAdded = (kWhNeeded * evEfficiency.value).toFixed(0)
+  return { kWhNeeded: kWhNeeded.toFixed(1), totalCostPounds, rangeAdded }
 })
 </script>
 
@@ -208,16 +267,28 @@ const equivalentYearResult = computed<{ year: number; isOutBounds: boolean }>(()
               <span class="has-text-weight-bold ml-1 unit-text">p/kWh</span>
             </label>
           </div>
-          <div class="control" data-label="charger-price-slider-control">
+          <div class="control mb-1" data-label="charger-price-slider-control">
             <input 
               class="slider-input" 
               type="range" 
               min="-20" 
               max="120" 
               step="1" 
-              v-model.number="evRate" 
+              :value="evRate"
+              @input="handleChargerInput"
               data-label="charger-price-slider"
             />
+          </div>
+          <div class="is-flex is-justify-content-space-between px-1" data-label="preset-markers">
+            <button 
+              v-for="preset in PRESET_RATES" 
+              :key="preset.value"
+              class="button is-text is-small p-0 has-text-grey is-size-7"
+              @click="evRate = preset.value"
+              type="button"
+            >
+              | {{ preset.label }}
+            </button>
           </div>
         </div>
 
@@ -291,17 +362,46 @@ const equivalentYearResult = computed<{ year: number; isOutBounds: boolean }>(()
           </div>
         </div>
 
+        <hr class="my-4" style="background-color: var(--bulma-border);" />
+
+        <!-- Charging Session Estimator -->
+        <div class="field mb-4" data-label="session-estimator-group">
+          <label class="label is-size-6 mb-2">Charging Session Estimator</label>
+          <div class="columns is-mobile mb-2">
+            <div class="column">
+              <label class="label is-size-7 mb-1">Battery Size (kWh)</label>
+              <input class="input is-small custom-input" type="number" step="5" min="10" max="150" v-model.number="batteryCapacity" />
+            </div>
+            <div class="column">
+              <label class="label is-size-7 mb-1">Current %</label>
+              <input class="input is-small custom-input" type="number" step="5" min="0" max="95" v-model.number="currentSoc" />
+            </div>
+            <div class="column">
+              <label class="label is-size-7 mb-1">Target %</label>
+              <input class="input is-small custom-input" type="number" step="5" min="5" max="100" v-model.number="targetSoc" />
+            </div>
+          </div>
+          <div class="is-size-7 p-2 custom-estimator-box rounded-sm">
+            Adding <strong>{{ chargeDetails.kWhNeeded }} kWh</strong> ({{ targetSoc - currentSoc }}%) costs <strong>£{{ chargeDetails.totalCostPounds }}</strong> and yields approx. <strong>{{ chargeDetails.rangeAdded }} miles</strong> of range.
+          </div>
+        </div>
+
         <!-- Outputs -->
-        <div class="notification is-link is-light mt-5" data-label="results-notification">
+        <div 
+          class="notification is-link is-light mt-4 results-box has-text-centered" 
+          @dblclick="copyResultsSummary"
+          title="Double-click to copy summary"
+          data-label="results-notification"
+        >
           <p class="is-size-6 mb-1" data-label="cost-per-mile-output">
             <strong>Cost Per Mile:</strong> {{ costPerMile }}p
           </p>
           <p class="is-size-6 mb-2" data-label="pence-per-litre-output">
             <strong>Equiv. Petrol Price:</strong> {{ pencePerLitre }}p / Litre
           </p>
-          <hr class="my-2" style="background-color: var(--bulma-border);" data-label="results-divider" />
-          <div class="is-flex is-align-items-center is-flex-wrap-wrap" data-label="equivalent-year-container">
-            <p class="is-size-5 has-text-weight-bold has-text-link mr-2" data-label="equivalent-year-output">
+          <hr class="my-2 mx-auto" style="background-color: var(--bulma-border); width: 80%;" data-label="results-divider" />
+          <div class="is-flex is-align-items-center is-flex-wrap-wrap is-justify-content-center" data-label="equivalent-year-container">
+            <p class="is-size-5 has-text-weight-bold has-text-link mr-2 mb-0" data-label="equivalent-year-output">
               Equivalent Year: {{ equivalentYearResult.year }}
             </p>
             <span 
@@ -309,8 +409,14 @@ const equivalentYearResult = computed<{ year: number; isOutBounds: boolean }>(()
               class="tag is-warning is-light has-text-weight-semibold mt-1"
               data-label="out-of-bounds-badge"
             >
-              Beyond the data range
+              Beyond data range
             </span>
+          </div>
+          <p class="is-size-7 has-text-grey-dark mt-2 mb-0 is-italic" style="user-select: none;">
+            💡 Double-click box to copy summary
+          </p>
+          <div v-if="copyFeedback" class="has-text-success is-size-7 has-text-weight-bold mt-1">
+            ✓ Copied to clipboard!
           </div>
         </div>
       </div>
@@ -444,6 +550,28 @@ const equivalentYearResult = computed<{ year: number; isOutBounds: boolean }>(()
 
 .inline-number-input[type="number"] {
   -moz-appearance: textfield;
+}
+
+.custom-input {
+  background-color: var(--bulma-background);
+  color: var(--bulma-text);
+  border-color: var(--bulma-border);
+}
+
+.custom-estimator-box {
+  background-color: var(--bulma-background);
+  color: var(--bulma-text);
+  border: 1px solid var(--bulma-border);
+  border-radius: 4px;
+}
+
+.results-box {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.results-box:hover {
+  background-color: rgba(72, 95, 199, 0.15) !important;
 }
 
 /* Native Dialog Styles */
