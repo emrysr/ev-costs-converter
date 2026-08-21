@@ -1,12 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 
-interface CalculationResult {
-  costPerMile: string
-  pencePerLitre: string
-  equivalentYear: number
-}
-
 const evRate = ref<number>(24.0)
 const evEfficiency = ref<number>(3.5)
 const petrolMpg = ref<number>(40.0)
@@ -43,32 +37,45 @@ const equivalentYear = computed<number>(() => {
 </script>
 
 <template>
-  <main style="max-width: 400px; margin: 2rem auto; font-family: system-ui, sans-serif; padding: 1rem;">
-    <h2>EV to Petrol Converter</h2>
-    
-    <div style="margin-bottom: 1rem;">
-      <label>Charger Price (p/kWh):</label>
-      <input type="number" v-model.number="evRate" style="width: 100%; padding: 0.5rem;" />
-    </div>
+  <section class="section">
+    <div class="container" style="max-width: 480px;">
+      <div class="box">
+        <h1 class="title is-4 has-text-centered">EV Cost Converter</h1>
+        
+        <div class="field">
+          <label class="label">Charger Price (p/kWh)</label>
+          <div class="control">
+            <input class="input" type="number" step="0.1" v-model.number="evRate" />
+          </div>
+        </div>
 
-    <div style="margin-bottom: 1rem;">
-      <label>EV Efficiency (mi/kWh):</label>
-      <input type="number" step="0.1" v-model.number="evEfficiency" style="width: 100%; padding: 0.5rem;" />
-    </div>
+        <div class="field">
+          <label class="label">EV Efficiency (mi/kWh)</label>
+          <div class="control">
+            <input class="input" type="number" step="0.1" v-model.number="evEfficiency" />
+          </div>
+        </div>
 
-    <div style="margin-bottom: 1rem;">
-      <label>Equivalent Petrol MPG:</label>
-      <input type="number" step="1" v-model.number="petrolMpg" style="width: 100%; padding: 0.5rem;" />
-    </div>
+        <div class="field">
+          <label class="label">Equivalent Petrol MPG</label>
+          <div class="control">
+            <input class="input" type="number" step="1" v-model.number="petrolMpg" />
+          </div>
+        </div>
 
-    <hr />
-
-    <div style="background: #f1f5f9; padding: 1rem; border-radius: 8px;">
-      <p><strong>Cost Per Mile:</strong> {{ costPerMile }}p</p>
-      <p><strong>Equiv. Petrol Price:</strong> {{ pencePerLitre }}p / Litre</p>
-      <p style="font-size: 1.2rem; color: #0284c7;">
-        <strong>Equivalent Year:</strong> {{ equivalentYear }}
-      </p>
+        <div class="notification is-link is-light mt-5">
+          <p class="is-size-6 mb-1">
+            <strong>Cost Per Mile:</strong> {{ costPerMile }}p
+          </p>
+          <p class="is-size-6 mb-2">
+            <strong>Equiv. Petrol Price:</strong> {{ pencePerLitre }}p / Litre
+          </p>
+          <hr class="my-2" />
+          <p class="is-size-5 has-text-weight-bold has-text-link">
+            Equivalent Year: {{ equivalentYear }}
+          </p>
+        </div>
+      </div>
     </div>
-  </main>
+  </section>
 </template>
