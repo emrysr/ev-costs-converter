@@ -369,7 +369,7 @@ const chargeDetails = computed(() => {
           <label class="label is-size-6 mb-2">Charging Session Estimator</label>
           <div class="columns is-mobile mb-2">
             <div class="column">
-              <label class="label is-size-7 mb-1">Battery Size (kWh)</label>
+              <label class="label is-size-7 mb-1">Battery (kWh)</label>
               <input class="input is-small custom-input" type="number" step="5" min="10" max="150" v-model.number="batteryCapacity" />
             </div>
             <div class="column">
