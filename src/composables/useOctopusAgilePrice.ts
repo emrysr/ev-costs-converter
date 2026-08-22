@@ -1,9 +1,5 @@
-import { ref } from 'vue'
-
-// Blaenau Ffestiniog (Gwynedd, North Wales) is served by SP Manweb, which
-// Octopus designates Region D ("North Wales, Merseyside and Cheshire") in
-// the Agile tariff API.
-const AGILE_REGION_CODE = 'D'
+import { ref, computed } from 'vue'
+import type { AgileRegionCode } from '../constants/defaults'
 
 // The Octopus Agile product code changes every so often when Octopus rolls
 // out a new tariff version (roughly annually). This is the code current as
@@ -20,6 +16,7 @@ interface AgileCache {
   validTo: string
   fetchedAt: string
   productCode: string
+  regionCode: AgileRegionCode
 }
 
 function getHalfHourWindow(date: Date): { from: Date; to: Date } {
@@ -71,10 +68,11 @@ async function discoverCurrentAgileProductCode(): Promise<string> {
 
 async function fetchRateForProductCode(
   productCode: string,
+  regionCode: AgileRegionCode,
   from: Date,
   to: Date
 ): Promise<AgileCache> {
-  const tariffCode = `E-1R-${productCode}-${AGILE_REGION_CODE}`
+  const tariffCode = `E-1R-${productCode}-${regionCode}`
   const url =
     `https://api.octopus.energy/v1/products/${productCode}/electricity-tariffs/` +
     `${tariffCode}/standard-unit-rates/?period_from=${from.toISOString()}&period_to=${to.toISOString()}`
@@ -90,23 +88,24 @@ async function fetchRateForProductCode(
     validFrom: rate.valid_from,
     validTo: rate.valid_to,
     fetchedAt: new Date().toISOString(),
-    productCode
+    productCode,
+    regionCode
   }
 }
 
-async function fetchFreshRate(): Promise<AgileCache> {
+async function fetchFreshRate(regionCode: AgileRegionCode): Promise<AgileCache> {
   const now = new Date()
   const { from, to } = getHalfHourWindow(now)
   const lastKnownProductCode = readCache()?.productCode || FALLBACK_PRODUCT_CODE
 
   try {
-    return await fetchRateForProductCode(lastKnownProductCode, from, to)
+    return await fetchRateForProductCode(lastKnownProductCode, regionCode, from, to)
   } catch (e) {
     // The cached/fallback product code may have been retired. Fall back to
     // discovering whichever Agile product is live right now and retry once.
     const currentProductCode = await discoverCurrentAgileProductCode()
     if (currentProductCode === lastKnownProductCode) throw e
-    return await fetchRateForProductCode(currentProductCode, from, to)
+    return await fetchRateForProductCode(currentProductCode, regionCode, from, to)
   }
 }
 
@@ -117,18 +116,27 @@ export function useOctopusAgilePrice() {
   const lastUpdated = ref<string | null>(null)
 
   /**
-   * Ensures `agilePrice` reflects the current half-hour slot. Reads from
-   * localStorage first and only hits the Octopus API when the cached slot
-   * has expired (or there's no cache yet), so repeated calls within the
-   * same half hour never trigger a network request.
+   * Ensures `agilePrice` reflects the current half-hour slot for the given region.
+   * Only fetches if a region is provided. Reads from localStorage first and only
+   * hits the Octopus API when the cached slot has expired (or there's no cache yet),
+   * so repeated calls within the same half hour never trigger a network request.
    */
-  async function ensureFreshPrice(): Promise<void> {
+  async function ensureFreshPrice(regionCode: AgileRegionCode | null): Promise<void> {
+    // If no region is set, clear the price and don't fetch
+    if (!regionCode) {
+      agilePrice.value = null
+      error.value = null
+      lastUpdated.value = null
+      return
+    }
+
     const now = new Date()
     const cache = readCache()
 
-    if (isCacheValid(cache, now)) {
-      agilePrice.value = cache!.value
-      lastUpdated.value = cache!.fetchedAt
+    // If cache is valid for the current region, use it
+    if (isCacheValid(cache, now) && cache?.regionCode === regionCode) {
+      agilePrice.value = cache.value
+      lastUpdated.value = cache.fetchedAt
       return
     }
 
@@ -136,16 +144,18 @@ export function useOctopusAgilePrice() {
     error.value = null
 
     try {
-      const fresh = await fetchFreshRate()
+      const fresh = await fetchFreshRate(regionCode)
       writeCache(fresh)
       agilePrice.value = fresh.value
       lastUpdated.value = fresh.fetchedAt
     } catch (e) {
       error.value = e instanceof Error ? e.message : 'Failed to fetch the Agile price'
       // A stale cached value is still more useful than nothing.
-      if (cache) {
+      if (cache && cache.regionCode === regionCode) {
         agilePrice.value = cache.value
         lastUpdated.value = cache.fetchedAt
+      } else {
+        agilePrice.value = null
       }
     } finally {
       isLoading.value = false
@@ -157,7 +167,6 @@ export function useOctopusAgilePrice() {
     isLoading,
     error,
     lastUpdated,
-    ensureFreshPrice,
-    regionCode: AGILE_REGION_CODE
+    ensureFreshPrice
   }
 }
