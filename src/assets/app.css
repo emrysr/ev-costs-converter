@@ -1,0 +1,95 @@
+/* Global styles shared across EV Cost Converter components.
+   Import this once (e.g. in your root component or main entry file):
+   import './assets/app.css' */
+
+.slider-input {
+  width: 100%;
+  height: 6px;
+  background: var(--bulma-border-weak, var(--bulma-border));
+  border-radius: 3px;
+  outline: none;
+  accent-color: var(--bulma-link);
+}
+
+.inline-input-wrapper {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.inline-number-input {
+  border: none;
+  background: transparent;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--bulma-text);
+  text-align: right;
+  width: 3.5rem;
+  padding: 0;
+  outline: none;
+}
+
+.unit-text {
+  font-size: 1.1rem;
+  color: var(--bulma-text);
+}
+
+.inline-number-input:focus {
+  border-bottom: 2px solid var(--bulma-link);
+}
+
+.inline-number-input::-webkit-outer-spin-button,
+.inline-number-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.inline-number-input[type='number'] {
+  -moz-appearance: textfield;
+}
+
+.rounded-sm {
+  border-radius: 4px;
+}
+
+.custom-input {
+  text-align: center;
+}
+
+.custom-estimator-box {
+  background: var(--bulma-scheme-main-bis, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--bulma-border);
+}
+
+.results-box {
+  cursor: pointer;
+  user-select: none;
+}
+
+.settings-dialog {
+  border: none;
+  border-radius: 8px;
+  padding: 0;
+  max-width: 480px;
+  width: 90vw;
+  background: transparent;
+}
+
+.settings-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.settings-dialog[open] {
+  animation: settings-fade-in 0.15s ease-out;
+}
+
+@keyframes settings-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

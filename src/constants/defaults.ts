@@ -1,0 +1,8 @@
+export const DEFAULT_EV_RATE = 24
+export const DEFAULT_EV_EFFICIENCY = 3.5
+export const DEFAULT_PETROL_MPG = 40
+export const DEFAULT_SHAKE_THRESHOLD = 2500
+export const DEFAULT_SHAKE_ENABLED = true
+export const DEFAULT_BATTERY_CAPACITY = 60
+export const DEFAULT_CURRENT_SOC = 20
+export const DEFAULT_TARGET_SOC = 80
