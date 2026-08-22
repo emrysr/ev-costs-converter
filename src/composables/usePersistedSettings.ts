@@ -7,7 +7,9 @@ import {
   DEFAULT_SHAKE_ENABLED,
   DEFAULT_BATTERY_CAPACITY,
   DEFAULT_CURRENT_SOC,
-  DEFAULT_TARGET_SOC
+  DEFAULT_TARGET_SOC,
+  DEFAULT_AGILE_REGION,
+  type AgileRegionCode
 } from '../constants/defaults'
 
 const STORAGE_KEYS = {
@@ -18,7 +20,8 @@ const STORAGE_KEYS = {
   shakeEnabled: 'shake_enabled',
   batteryCapacity: 'battery_capacity',
   currentSoc: 'current_soc',
-  targetSoc: 'target_soc'
+  targetSoc: 'target_soc',
+  agileRegion: 'agile_region'
 } as const
 
 export function usePersistedSettings() {
@@ -30,6 +33,7 @@ export function usePersistedSettings() {
   const batteryCapacity = ref<number>(DEFAULT_BATTERY_CAPACITY)
   const currentSoc = ref<number>(DEFAULT_CURRENT_SOC)
   const targetSoc = ref<number>(DEFAULT_TARGET_SOC)
+  const agileRegion = ref<AgileRegionCode | null>(DEFAULT_AGILE_REGION)
 
   function loadFromStorage() {
     const savedEvRate = localStorage.getItem(STORAGE_KEYS.evRate)
@@ -40,6 +44,7 @@ export function usePersistedSettings() {
     const savedBatteryCapacity = localStorage.getItem(STORAGE_KEYS.batteryCapacity)
     const savedCurrentSoc = localStorage.getItem(STORAGE_KEYS.currentSoc)
     const savedTargetSoc = localStorage.getItem(STORAGE_KEYS.targetSoc)
+    const savedAgileRegion = localStorage.getItem(STORAGE_KEYS.agileRegion)
 
     if (savedEvRate !== null) evRate.value = parseFloat(savedEvRate)
     if (savedEvEfficiency !== null) evEfficiency.value = parseFloat(savedEvEfficiency)
@@ -49,6 +54,7 @@ export function usePersistedSettings() {
     if (savedBatteryCapacity !== null) batteryCapacity.value = parseFloat(savedBatteryCapacity)
     if (savedCurrentSoc !== null) currentSoc.value = parseFloat(savedCurrentSoc)
     if (savedTargetSoc !== null) targetSoc.value = parseFloat(savedTargetSoc)
+    if (savedAgileRegion !== null) agileRegion.value = savedAgileRegion as AgileRegionCode
   }
 
   function persistToStorage() {
@@ -60,6 +66,11 @@ export function usePersistedSettings() {
     localStorage.setItem(STORAGE_KEYS.batteryCapacity, batteryCapacity.value.toString())
     localStorage.setItem(STORAGE_KEYS.currentSoc, currentSoc.value.toString())
     localStorage.setItem(STORAGE_KEYS.targetSoc, targetSoc.value.toString())
+    if (agileRegion.value) {
+      localStorage.setItem(STORAGE_KEYS.agileRegion, agileRegion.value)
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.agileRegion)
+    }
   }
 
   function resetToDefaults() {
@@ -71,6 +82,7 @@ export function usePersistedSettings() {
     batteryCapacity.value = DEFAULT_BATTERY_CAPACITY
     currentSoc.value = DEFAULT_CURRENT_SOC
     targetSoc.value = DEFAULT_TARGET_SOC
+    agileRegion.value = DEFAULT_AGILE_REGION
     // Matches the original app's behaviour: wipes everything in localStorage,
     // including the cached Agile price. It'll simply be refetched next time
     // ensureFreshPrice() runs.
@@ -80,7 +92,7 @@ export function usePersistedSettings() {
   loadFromStorage()
 
   watch(
-    [evRate, evEfficiency, petrolMpg, shakeThreshold, shakeEnabled, batteryCapacity, currentSoc, targetSoc],
+    [evRate, evEfficiency, petrolMpg, shakeThreshold, shakeEnabled, batteryCapacity, currentSoc, targetSoc, agileRegion],
     persistToStorage
   )
 
@@ -93,6 +105,7 @@ export function usePersistedSettings() {
     batteryCapacity,
     currentSoc,
     targetSoc,
+    agileRegion,
     resetToDefaults
   }
 }
