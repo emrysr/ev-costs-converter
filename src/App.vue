@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import './assets/app.css'
 
 import ChargerPriceControl from './components/ChargerPriceControl.vue'
@@ -23,6 +23,7 @@ const {
   batteryCapacity,
   currentSoc,
   targetSoc,
+  agileRegion,
   resetToDefaults
 } = usePersistedSettings()
 
@@ -53,9 +54,14 @@ function openSettings() {
   settingsDialog.value?.open()
 }
 
-// Reads the cached Agile price if it's still valid for the current
-// half-hour slot, otherwise fetches a fresh one from Octopus.
-ensureFreshPrice()
+// Fetch Agile price whenever the region changes, or on initial load
+watch(
+  agileRegion,
+  () => {
+    ensureFreshPrice(agileRegion.value)
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -107,6 +113,7 @@ ensureFreshPrice()
       ref="settingsDialog"
       v-model:shake-enabled="shakeEnabled"
       v-model:shake-threshold="shakeThreshold"
+      v-model:agile-region="agileRegion"
       @reset="resetToDefaults"
     />
   </section>
