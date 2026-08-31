@@ -2,6 +2,8 @@
 
 A progressive web app that converts electric vehicle (EV) charging costs to historical petrol price equivalents, helping you quickly understand how EV charging costs compare to traditional petrol cars.
 
+![App Screenshot](Screenshot_20260831-140214.png)
+
 ## Features
 
 - **Quick Cost Comparison**: Convert your EV charging price per mile to a petrol price equivalent
