@@ -26,7 +26,7 @@ async function copyResultsSummary() {
 
 <template>
   <div
-    class="notification is-link is-light mt-4 results-box has-text-centered"
+    class="notification mt-4 results-box has-text-centered"
     @dblclick="copyResultsSummary"
     title="Double-click to copy summary"
     data-label="results-notification"
@@ -35,10 +35,10 @@ async function copyResultsSummary() {
       <strong>Cost Per Mile:</strong> {{ costPerMile }}p
     </p>
     <p class="is-size-6 mb-2" data-label="pence-per-litre-output">
-      <strong>Equiv. Petrol Price:</strong> {{ pencePerLitre }}p / Litre
+      <strong>Equivalent to:</strong> {{ pencePerLitre }}p / Litre
     </p>
     <hr
-      class="my-2 mx-auto"
+      class="my-1 mx-auto"
       style="background-color: var(--bulma-border); width: 80%;"
       data-label="results-divider"
     />
@@ -47,7 +47,7 @@ async function copyResultsSummary() {
       data-label="equivalent-year-container"
     >
       <p class="is-size-5 has-text-weight-bold has-text-link mr-2 mb-0" data-label="equivalent-year-output">
-        Equivalent Year: {{ equivalentYear }}
+        Petrol Price Year: {{ equivalentYear }}
       </p>
       <span
         v-if="isOutBounds"
@@ -57,9 +57,6 @@ async function copyResultsSummary() {
         Beyond data range
       </span>
     </div>
-    <p class="is-size-7 has-text-grey-dark mt-2 mb-0 is-italic" style="user-select: none;">
-      💡 Double-click box to copy summary
-    </p>
     <div v-if="copyFeedback" class="has-text-success is-size-7 has-text-weight-bold mt-1" data-label="copy-feedback">
       ✓ Copied to clipboard!
     </div>

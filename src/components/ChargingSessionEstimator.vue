@@ -53,7 +53,7 @@ defineProps<{
     </div>
     <div class="is-size-7 p-2 custom-estimator-box rounded-sm" data-label="charging-session-summary">
       Adding <strong>{{ chargeDetails.kWhNeeded }} kWh</strong> ({{ targetSoc - currentSoc }}%) costs
-      <strong>£{{ chargeDetails.totalCostPounds }}</strong> and yields approx.
+      <strong>£{{ chargeDetails.totalCostPounds }}</strong> <br>and yields approx.
       <strong>{{ chargeDetails.rangeAdded }} miles</strong> of range.
     </div>
   </div>
