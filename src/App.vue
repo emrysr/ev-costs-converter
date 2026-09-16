@@ -65,7 +65,7 @@ watch(
 </script>
 
 <template>
-  <section class="section" data-label="main-section">
+  <section data-label="main-section">
     <div class="container" style="max-width: 480px;" data-label="app-container">
       <div class="box" data-label="card-wrapper">
         <div class="is-flex is-justify-content-space-between is-align-items-center mb-5">
